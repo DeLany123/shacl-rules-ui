@@ -1,0 +1,22 @@
+PREFIX ex: <http://example.org/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+# People with ages
+ex:Alice   ex:age 30 ;
+           ex:name "Alice" ;
+           ex:parent ex:Dave .
+
+ex:Bob     ex:age 15 ;
+           ex:name "Bob" ;
+           ex:parent ex:Eve .
+
+ex:Carol   ex:age 22 ;
+           ex:name "Carol" ;
+           ex:parent ex:Dave .
+
+ex:Dave    ex:age 55 ;
+           ex:name "Dave" .
+
+ex:Eve     ex:age 48 ;
+           ex:name "Eve" .
+

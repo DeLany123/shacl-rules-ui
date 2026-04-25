@@ -1,0 +1,14 @@
+{
+  "name": "shacl-rule-ui",
+  "version": "1.0.0",
+  "description": "Interactive web UI for SHACL rule inference using Comunica",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@landmaes/query-shacl-rule": "^1.0.3",
+    "express": "^4.18.2",
+    "n3": "^1.26.0"
+  }
+}

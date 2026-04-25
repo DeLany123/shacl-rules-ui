@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SHACL Rule Inference – Comunica</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">⚡ SHACL Rule UI</div>
+    <div class="sub">Interactive SHACL rule inference — powered by Comunica</div>
+    <span class="badge">Vue 3</span>
+  </header>
+
+  <main>
+    <div class="editors">
+      <div class="panel">
+        <div class="panel-header">
+          SHACL Query (rules + optional inline data)
+          <span class="lang-tag">SHACL</span>
+        </div>
+        <textarea v-model="shaclQuery" spellcheck="false"></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          Extra Data (Turtle)
+          <em style="font-weight:400;font-size:.71rem;color:#475569;margin-left:4px">synced to DATA block</em>
+          <span class="lang-tag">Turtle</span>
+        </div>
+        <textarea v-model="turtleData" spellcheck="false"
+          placeholder=":alice :parent :bob .&#10;:bob   :parent :carol ."></textarea>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-run" :disabled="running" @click="runQuery">
+        <span>{{ running ? '⏳' : '▶' }}</span>
+        {{ running ? 'Running…' : 'Run' }}
+      </button>
+      <button class="btn-clear" @click="clearResults">Clear</button>
+      <span class="status" :class="statusClass">{{ statusText }}</span>
+      <div class="controls-right">
+        <button class="btn-help" @click="showModal('how')">📖 How to use</button>
+        <button class="btn-help" @click="showModal('grammar')">📐 Grammar</button>
+        <button class="btn-upload" @click="triggerFileUpload">📂 Upload .ttl</button>
+        <input type="file" ref="fileInput" accept=".ttl,.n3,.nt,.turtle" style="display:none" @change="handleFileUpload" />
+      </div>
+    </div>
+
+    <div class="results-panel panel">
+      <div class="panel-header">
+        Results
+        <span class="lang-tag">{{ goodRows }} triple{{ goodRows !== 1 ? 's' : '' }}</span>
+      </div>
+      <div class="results-scroll" ref="scroll">
+        <div v-if="rows.length === 0" class="empty-state">
+          {{ neverRan ? 'Run a query to see inferred triples here.' : 'No triples inferred.' }}
+        </div>
+        <table v-else>
+          <thead><tr><th>Subject</th><th>Predicate</th><th>Object</th><th>Graph</th></tr></thead>
+          <tbody>
+            <tr v-for="(row, i) in rows" :key="i" :class="{ 'error-row': row.error }">
+              <template v-if="row.error">
+                <td colspan="4">Error: {{ row.error }}</td>
+              </template>
+              <template v-else>
+                <td v-html="fmt(row.subject)"></td>
+                <td v-html="fmt(row.predicate)"></td>
+                <td v-html="fmt(row.object)"></td>
+                <td v-html="fmt(row.graph)"></td>
+              </template>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Help modal -->
+  <div class="modal-backdrop" v-if="modal" @click.self="modal=null">
+    <div class="modal">
+      <div class="modal-header">
+        <span>{{ modal === 'grammar' ? '📐 SHACL Rule Grammar' : '📖 How to use this UI' }}</span>
+        <button class="modal-close" @click="modal=null">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- GRAMMAR -->
+        <template v-if="modal === 'grammar'">
+          <p>A SHACL Rules query consists of optional <strong>PREFIX</strong> declarations, an optional <strong>DATA</strong> block, and one or more <strong>RULE</strong> clauses.</p>
+          <pre>PREFIX prefix: &lt;uri&gt;
+
+DATA {
+  # inline background triples (Turtle syntax)
+  ex:Alice ex:age 30 .
+}
+
+RULE { &lt;head triple pattern&gt; }
+WHERE {
+  # SPARQL graph pattern
+}</pre>
+          <h4>Fixpoint semantics</h4>
+          <p>Rules are applied repeatedly until no new triples are inferred. This means transitive rules work automatically:</p>
+          <pre>RULE { ?a ex:ancestor ?c }
+WHERE {
+  ?a ex:parent ?b .
+  ?b ex:ancestor ?c .
+}</pre>
+          <h4>Multiple rules</h4>
+          <p>You can write several RULE blocks in one query. They all share the same store and are iterated together.</p>
+          <pre>RULE { ?p ex:isAdult true }
+WHERE { ?p ex:age ?a . FILTER(?a >= 18) }
+
+RULE { ?p ex:isMinor true }
+WHERE { ?p ex:age ?a . FILTER(?a &lt; 18) }</pre>
+          <h4>FILTER, OPTIONAL, BIND</h4>
+          <p>The WHERE clause is a full SPARQL 1.2 graph pattern — you can use <code>FILTER</code>, <code>OPTIONAL</code>, <code>BIND</code>, <code>VALUES</code>, sub-queries, etc.</p>
+        </template>
+
+        <!-- HOW TO USE -->
+        <template v-if="modal === 'how'">
+          <h4>1 — Write your SHACL Rules query</h4>
+          <p>Use the left editor. Start with PREFIX declarations, then write one or more RULE … WHERE … blocks.</p>
+          <h4>2 — Add background data</h4>
+          <p>Type Turtle triples in the right editor <em>or</em> click <strong>📂 Upload .ttl</strong> to load a file. The triples are automatically synced into the <code>DATA { }</code> block in the SHACL editor. PREFIX lines in the Turtle file are promoted to the top of the query.</p>
+          <h4>3 — Run</h4>
+          <p>Click <strong>▶ Run</strong>. The server parses your query, loads the data into an in-memory RDF store, and runs the fixpoint reasoning loop. Inferred triples stream back and appear in the results table.</p>
+          <h4>4 — Inspect results</h4>
+          <p>Each row in the results table is one inferred quad (Subject / Predicate / Object / Graph). URIs are shown in blue, literals in light blue.</p>
+          <h4>5 — Clear</h4>
+          <p>Click <strong>Clear</strong> to reset the results table without changing the editors.</p>
+          <h4>Tips</h4>
+          <ul>
+            <li>You can edit the DATA block directly in the SHACL editor — the Turtle panel stays independent.</li>
+            <li>Comments (<code>#</code>) in the Turtle panel are stripped before syncing.</li>
+            <li>The engine runs server-side (Node.js); the browser only sends and displays.</li>
+          </ul>
+        </template>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
+
