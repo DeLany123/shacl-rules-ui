@@ -2,6 +2,5 @@
   { "name": "Ancestor (transitive)",         "file": "ancestor.shacl" },
   { "name": "Adult / Minor classification",  "file": "classification.shacl" },
   { "name": "Sibling detection",             "file": "sibling.shacl" },
-  { "name":  "Healtcare risk ranker",        "file": "2026-04-26-odrl-dpv-healthcare-risk-ranked.srl" }
+  { "name":  "Healthcare risk ranker",        "file": "2026-04-26-odrl-dpv-healthcare-risk-ranked.srl" }
 ]
-
