@@ -66,7 +66,10 @@
     <div class="results-panel panel panel-bottom" :style="{ height: resultsHeight + 'px' }">
       <div class="panel-header">
         Results
-        <span class="lang-tag">{{ goodRows }} triple{{ goodRows !== 1 ? 's' : '' }}</span>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <button class="btn-download" v-if="goodRows > 0" @click="downloadTurtle" title="Download inferred triples as Turtle">⬇ Download .ttl</button>
+          <span class="lang-tag">{{ goodRows }} triple{{ goodRows !== 1 ? 's' : '' }}</span>
+        </div>
       </div>
       <div class="results-scroll" ref="scroll">
         <div v-if="rows.length === 0" class="empty-state">

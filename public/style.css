@@ -149,6 +149,13 @@ textarea::placeholder { color: #3d4f6b; }
 }
 .btn-examples:hover { background: #0ea5e940; border-color: #7dd3fc; }
 
+.btn-download {
+  background: #16423020; color: #34d399; border: 1px solid #34d39940;
+  padding: .28rem .75rem; border-radius: 6px; font-size: .76rem; font-weight: 600;
+  cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap;
+}
+.btn-download:hover { background: #34d39920; border-color: #34d399; }
+
 /* ── Status / exec time ────────────────────────────── */
 .status             { font-size: .8rem; color: #64748b; }
 .status.running     { color: #fbbf24; }

@@ -206,6 +206,67 @@ createApp({
       provenance.value = null;
     }
 
+    function downloadTurtle() {
+      const good = rows.value.filter(r => !r.error);
+      if (!good.length) return;
+
+      // Collect prefix declarations from the SHACL query
+      const prefixLines = shaclQuery.value
+        .split('\n')
+        .filter(l => /^\s*PREFIX\s+/i.test(l))
+        .map(l => l.trim());
+
+      // Build a prefix map for compacting IRIs
+      const prefixMap = {};
+      for (const line of prefixLines) {
+        const m = line.match(/PREFIX\s+(\S+)\s*<([^>]+)>/i);
+        if (m) prefixMap[m[1]] = m[2];  // e.g. {"ex:": "http://example/"}
+      }
+
+      function compact(iri) {
+        if (!iri) return '[]'; // blank/default graph — skip
+        for (const [prefix, base] of Object.entries(prefixMap)) {
+          if (iri.startsWith(base)) return prefix + iri.slice(base.length);
+        }
+        return `<${iri}>`;
+      }
+
+      function termToTurtle(val) {
+        if (!val) return null;
+        if (/^(https?:|urn:|[a-z][a-z0-9+\-.]*:\/\/)/.test(val)) return compact(val);
+        // literal — wrap in quotes; detect datatype suffix
+        if (val.includes('^^')) {
+          const [lit, dt] = val.split('^^');
+          return `"${lit}"^^${compact(dt)}`;
+        }
+        return `"${val.replace(/"/g, '\\"')}"`;
+      }
+
+      const tripleLines = good.map(r => {
+        const s = termToTurtle(r.subject);
+        const p = termToTurtle(r.predicate);
+        const o = termToTurtle(r.object);
+        if (!s || !p || !o) return null;
+        return `${s} ${p} ${o} .`;
+      }).filter(Boolean);
+
+      const ttl = [
+        '# Inferred triples exported from SHACL Rules Inference UI',
+        '',
+        ...prefixLines,
+        prefixLines.length ? '' : null,
+        ...tripleLines,
+      ].filter(l => l !== null).join('\n') + '\n';
+
+      const blob = new Blob([ttl], { type: 'text/turtle' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = 'inferred.ttl';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     async function clickRow(row) {
       if (row.error) return;
       provenance.value = { triple: row, loading: true, results: [] };
@@ -267,7 +328,7 @@ createApp({
       startResizeEditor, startResizeResults,
       examples, showExamples, examplesBtn,
       fmt, clearResults, runQuery, triggerFileUpload, handleFileUpload,
-      showModal, toggleExamples, loadExample, clickRow,
+      showModal, toggleExamples, loadExample, clickRow, downloadTurtle,
     };
   },
 }).mount('#app');
