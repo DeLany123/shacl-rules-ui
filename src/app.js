@@ -1,4 +1,5 @@
-const { createApp, ref, computed, watch, nextTick } = Vue;
+import './engine.js';
+import { createApp, ref, computed, watch, nextTick } from 'vue';
 
 const DEFAULT_SHACL =
 `PREFIX : <http://example/>
@@ -30,17 +31,12 @@ createApp({
     function showModal(which) { modal.value = which; }
 
     // --- DATA block sync ---
-    // Replaces (or inserts) the DATA { } block in the SHACL editor
-    // whenever the Turtle textarea changes.
     function syncDataBlock(turtle) {
       const allLines = turtle.trim().split('\n');
 
-      // Separate PREFIX declarations from actual triple lines
       const prefixLines = allLines.filter(l => /^\s*(PREFIX|@prefix)\s/i.test(l));
       const tripleLines = allLines.filter(l => l.trim() && !/^\s*(PREFIX|@prefix)\s/i.test(l) && !l.trim().startsWith('#'));
 
-      // Sync PREFIX lines into the top of the SHACL query
-      // (add any that aren't already declared there)
       for (const prefixLine of prefixLines) {
         const match = prefixLine.match(/PREFIX\s+(\S+)\s+/i);
         if (match && !shaclQuery.value.includes(match[1])) {
@@ -69,9 +65,7 @@ createApp({
     watch(turtleData, (val) => syncDataBlock(val));
 
     // --- File upload ---
-    function triggerFileUpload() {
-      fileInput.value.click();
-    }
+    function triggerFileUpload() { fileInput.value.click(); }
 
     function handleFileUpload(event) {
       const file = event.target.files[0];
@@ -79,7 +73,6 @@ createApp({
       const reader = new FileReader();
       reader.onload = (e) => {
         turtleData.value = e.target.result;
-        // reset so the same file can be re-uploaded
         event.target.value = '';
       };
       reader.readAsText(file);
@@ -119,34 +112,14 @@ createApp({
       statusClass.value = 'running';
 
       try {
-        const resp = await fetch('/api/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            shaclQuery: shaclQuery.value.trim(),
-            turtleData: turtleData.value.trim(),
-          }),
-        });
-
-        const reader  = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer    = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            let data;
-            try { data = JSON.parse(line); } catch { continue; }
-            rows.value.push(data);
+        await window.ShaclEngine.runShaclQuery(
+          { shaclQuery: shaclQuery.value.trim(), turtleData: turtleData.value },
+          async (quad) => {
+            rows.value.push(quad);
             await nextTick();
             if (scroll.value) scroll.value.scrollTop = scroll.value.scrollHeight;
           }
-        }
+        );
 
         const errCount = rows.value.filter(r => r.error).length;
         const good = rows.value.length - errCount;
@@ -155,8 +128,9 @@ createApp({
           : `Done — ${good} triple${good !== 1 ? 's' : ''} inferred`;
         statusClass.value = errCount > 0 ? 'error' : 'done';
       } catch (err) {
-        statusText.value = 'Request failed: ' + err.message;
+        statusText.value = 'Inference failed: ' + err.message;
         statusClass.value = 'error';
+        console.error(err);
       } finally {
         running.value = false;
       }
@@ -169,4 +143,5 @@ createApp({
     };
   },
 }).mount('#app');
+
 

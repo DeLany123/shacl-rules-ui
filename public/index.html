@@ -4,16 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SHACL Rule Inference – Comunica</title>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <div id="app">
-  <header>
-    <div class="logo">⚡ SHACL Rule UI</div>
-    <div class="sub">Interactive SHACL rule inference — powered by Comunica</div>
-    <span class="badge">Vue 3</span>
-  </header>
 
   <main>
     <div class="editors">
@@ -127,7 +121,7 @@ WHERE { ?p ex:age ?a . FILTER(?a &lt; 18) }</pre>
           <h4>2 — Add background data</h4>
           <p>Type Turtle triples in the right editor <em>or</em> click <strong>📂 Upload .ttl</strong> to load a file. The triples are automatically synced into the <code>DATA { }</code> block in the SHACL editor. PREFIX lines in the Turtle file are promoted to the top of the query.</p>
           <h4>3 — Run</h4>
-          <p>Click <strong>▶ Run</strong>. The server parses your query, loads the data into an in-memory RDF store, and runs the fixpoint reasoning loop. Inferred triples stream back and appear in the results table.</p>
+          <p>Click <strong>▶ Run</strong>. The engine parses your query, loads the data into an in-memory RDF store, and runs the fixpoint reasoning loop entirely in your browser. Inferred triples appear in the results table.</p>
           <h4>4 — Inspect results</h4>
           <p>Each row in the results table is one inferred quad (Subject / Predicate / Object / Graph). URIs are shown in blue, literals in light blue.</p>
           <h4>5 — Clear</h4>
@@ -136,7 +130,7 @@ WHERE { ?p ex:age ?a . FILTER(?a &lt; 18) }</pre>
           <ul>
             <li>You can edit the DATA block directly in the SHACL editor — the Turtle panel stays independent.</li>
             <li>Comments (<code>#</code>) in the Turtle panel are stripped before syncing.</li>
-            <li>The engine runs server-side (Node.js); the browser only sends and displays.</li>
+            <li>The engine runs entirely client-side in your browser — no server required.</li>
           </ul>
         </template>
 
@@ -145,7 +139,6 @@ WHERE { ?p ex:age ?a . FILTER(?a &lt; 18) }</pre>
   </div>
 </div>
 
-<script src="app.js"></script>
-</body>
+<script type="module" src="app.bundle.js"></script></body>
 </html>
 
