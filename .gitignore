@@ -1,2 +1,7 @@
-./.idea
-./node_modules
+.idea/
+node_modules/
+package-lock.json
+yarn.lock
+# app.bundle.js is built by CI, no need to commit it
+public/app.bundle.js
+
