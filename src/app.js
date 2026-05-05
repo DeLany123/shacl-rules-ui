@@ -30,6 +30,30 @@ createApp({
     const execTime    = ref(null); // ms, set after run
     const provenance  = ref(null); // { triple, loading, results }
 
+    // --- Resize handles ---
+    const editorHeight  = ref(420);
+    const resultsHeight = ref(260);
+    const draggingEditor  = ref(false);
+    const draggingResults = ref(false);
+
+    function startResizeEditor(e) {
+      draggingEditor.value = true;
+      const startY = e.clientY, startH = editorHeight.value;
+      const onMove = ev => { editorHeight.value = Math.max(120, startH + (ev.clientY - startY)); };
+      const onUp   = () => { draggingEditor.value = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
+    function startResizeResults(e) {
+      draggingResults.value = true;
+      const startY = e.clientY, startH = resultsHeight.value;
+      const onMove = ev => { resultsHeight.value = Math.max(80, startH + (ev.clientY - startY)); };
+      const onUp   = () => { draggingResults.value = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    }
+
     // --- Examples dropdown ---
     const examples     = ref([]);
     const showExamples = ref(false);
@@ -239,6 +263,8 @@ createApp({
       shaclQuery, turtleData, running, rows, neverRan, goodRows,
       statusText, statusClass, scroll, fileInput, modal,
       execTime, provenance,
+      editorHeight, resultsHeight, draggingEditor, draggingResults,
+      startResizeEditor, startResizeResults,
       examples, showExamples, examplesBtn,
       fmt, clearResults, runQuery, triggerFileUpload, handleFileUpload,
       showModal, toggleExamples, loadExample, clickRow,
