@@ -13,8 +13,17 @@
     <div class="editors">
       <div class="panel">
         <div class="panel-header">
-          SHACL Query (rules + optional inline data)
-          <span class="lang-tag">SHACL</span>
+          <span class="panel-title">SHACL Query <span style="font-weight:400;opacity:.6">(rules + optional inline data)</span></span>
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <div class="dropdown" ref="examplesBtn">
+              <button class="btn-examples" @click="toggleExamples">📋 Examples ▾</button>
+              <div class="dropdown-menu" v-if="showExamples">
+                <div v-for="ex in examples" :key="ex.file" class="dropdown-item" @click="loadExample(ex)">{{ ex.name }}</div>
+                <div v-if="examples.length === 0" class="dropdown-empty">No examples found</div>
+              </div>
+            </div>
+            <span class="lang-tag">SHACL</span>
+          </div>
         </div>
         <textarea v-model="shaclQuery" spellcheck="false"></textarea>
       </div>
@@ -36,14 +45,8 @@
       </button>
       <button class="btn-clear" @click="clearResults">Clear</button>
       <span class="status" :class="statusClass">{{ statusText }}</span>
+      <span class="exec-time" v-if="execTime !== null">⏱ {{ execTime }} ms</span>
       <div class="controls-right">
-        <div class="dropdown" ref="examplesBtn">
-          <button class="btn-help" @click="toggleExamples">📋 Examples ▾</button>
-          <div class="dropdown-menu" v-if="showExamples">
-            <div v-for="ex in examples" :key="ex.file" class="dropdown-item" @click="loadExample(ex)">{{ ex.name }}</div>
-            <div v-if="examples.length === 0" class="dropdown-empty">No examples found</div>
-          </div>
-        </div>
         <button class="btn-help" @click="showModal('how')">📖 How to use</button>
         <button class="btn-help" @click="showModal('grammar')">📐 Grammar</button>
         <button class="btn-upload" @click="triggerFileUpload">📂 Upload .ttl</button>
@@ -63,7 +66,7 @@
         <table v-else>
           <thead><tr><th>Subject</th><th>Predicate</th><th>Object</th><th>Graph</th></tr></thead>
           <tbody>
-            <tr v-for="(row, i) in rows" :key="i" :class="{ 'error-row': row.error }">
+            <tr v-for="(row, i) in rows" :key="i" :class="{ 'error-row': row.error, 'data-row': !row.error }" @click="clickRow(row)" :title="row.error ? '' : 'Click to see provenance'">
               <template v-if="row.error">
                 <td colspan="4">Error: {{ row.error }}</td>
               </template>
@@ -144,8 +147,49 @@ WHERE { ?p ex:age ?a . FILTER(?a &lt; 18) }</pre>
       </div>
     </div>
   </div>
+  <!-- Provenance modal -->
+  <div class="modal-backdrop" v-if="provenance" @click.self="provenance=null">
+    <div class="modal">
+      <div class="modal-header">
+        <span>🔍 Provenance</span>
+        <button class="modal-close" @click="provenance=null">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="prov-triple">
+          <span class="prov-label">Triple</span>
+          <code>{{ provenance.triple.subject }} · {{ provenance.triple.predicate }} · {{ provenance.triple.object }}</code>
+        </div>
+
+        <div v-if="provenance.loading" class="prov-loading">⏳ Looking up provenance…</div>
+        <div v-else-if="provenance.error" class="prov-error">Error: {{ provenance.error }}</div>
+        <div v-else-if="provenance.results.length === 0" class="prov-empty">No matching rule found for this triple.</div>
+
+        <div v-else v-for="(res, ri) in provenance.results" :key="ri" class="prov-rule-block">
+          <div class="prov-rule-title">Rule {{ ri + 1 }}</div>
+          <pre class="prov-rule-code">{{ res.rule.text }}</pre>
+
+          <div v-if="res.error" class="prov-error">Could not evaluate: {{ res.error }}</div>
+          <div v-else-if="res.bindingRows.length === 0" class="prov-empty">No supporting data bindings found.</div>
+          <div v-else>
+            <div class="prov-bindings-title">Supporting data ({{ res.bindingRows.length }} binding{{ res.bindingRows.length !== 1 ? 's' : '' }})</div>
+            <table class="prov-table">
+              <thead>
+                <tr><th v-for="col in Object.keys(res.bindingRows[0])" :key="col">?{{ col }}</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="(brow, bi) in res.bindingRows" :key="bi">
+                  <td v-for="col in Object.keys(res.bindingRows[0])" :key="col" v-html="fmt(brow[col])"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<script type="module" src="app.bundle.js"></script></body>
+<script type="module" src="app.bundle.js"></script>
+</body>
 </html>
 

@@ -27,6 +27,8 @@ createApp({
     const scroll      = ref(null);
     const fileInput   = ref(null);
     const modal       = ref(null); // 'grammar' | 'how' | null
+    const execTime    = ref(null); // ms, set after run
+    const provenance  = ref(null); // { triple, loading, results }
 
     // --- Examples dropdown ---
     const examples     = ref([]);
@@ -176,6 +178,19 @@ createApp({
       neverRan.value = true;
       statusText.value = 'Ready';
       statusClass.value = '';
+      execTime.value = null;
+      provenance.value = null;
+    }
+
+    async function clickRow(row) {
+      if (row.error) return;
+      provenance.value = { triple: row, loading: true, results: [] };
+      try {
+        const results = await window.ShaclEngine.explainTriple(shaclQuery.value.trim(), row);
+        provenance.value = { triple: row, loading: false, results };
+      } catch (e) {
+        provenance.value = { triple: row, loading: false, results: [], error: e.message };
+      }
     }
 
     async function runQuery() {
@@ -188,8 +203,11 @@ createApp({
       running.value = true;
       rows.value = [];
       neverRan.value = false;
+      execTime.value = null;
+      provenance.value = null;
       statusText.value = 'Running…';
       statusClass.value = 'running';
+      const t0 = performance.now();
 
       try {
         await window.ShaclEngine.runShaclQuery(
@@ -203,6 +221,7 @@ createApp({
 
         const errCount = rows.value.filter(r => r.error).length;
         const good = rows.value.length - errCount;
+        execTime.value = Math.round(performance.now() - t0);
         statusText.value  = errCount > 0
           ? `Done with errors — ${good} triple${good !== 1 ? 's' : ''} inferred`
           : `Done — ${good} triple${good !== 1 ? 's' : ''} inferred`;
@@ -219,9 +238,10 @@ createApp({
     return {
       shaclQuery, turtleData, running, rows, neverRan, goodRows,
       statusText, statusClass, scroll, fileInput, modal,
+      execTime, provenance,
       examples, showExamples, examplesBtn,
       fmt, clearResults, runQuery, triggerFileUpload, handleFileUpload,
-      showModal, toggleExamples, loadExample,
+      showModal, toggleExamples, loadExample, clickRow,
     };
   },
 }).mount('#app');

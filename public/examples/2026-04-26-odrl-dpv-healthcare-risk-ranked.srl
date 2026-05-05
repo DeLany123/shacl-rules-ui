@@ -1,0 +1,616 @@
+PREFIX :      <http://example.org/health-risk#>
+PREFIX dct:   <http://purl.org/dc/terms/>
+PREFIX dpv:   <https://w3id.org/dpv#>
+PREFIX pd:    <https://w3id.org/dpv/pd#>
+PREFIX risk:  <https://w3id.org/dpv/risk#>
+PREFIX odrl:  <http://www.w3.org/ns/odrl/2/>
+PREFIX skos:  <http://www.w3.org/2004/02/skos/core#>
+PREFIX duo:   <http://purl.obolibrary.org/obo/DUO_>
+PREFIX hl7ca: <http://terminology.hl7.org/CodeSystem/consentaction#>
+PREFIX xsd:   <http://www.w3.org/2001/XMLSchema#>
+
+DATA {
+  # ---------------------------------------------------
+  # Domain concepts
+  # ---------------------------------------------------
+
+  :PurposeHMB
+    a skos:Concept ;
+    skos:prefLabel "DUO HMB: Health/Medical/Biomedical Research" ;
+    skos:exactMatch duo:0000006 .
+
+  :PurposeGRU
+    a skos:Concept ;
+    skos:prefLabel "DUO GRU: General Research Use" ;
+    skos:exactMatch duo:0000042 .
+
+  :PurposeCC
+    a skos:Concept ;
+    skos:prefLabel "DUO CC: Clinical Care Use" ;
+    skos:exactMatch duo:0000043 .
+
+
+  # ---------------------------------------------------
+  # 1) Parties, data assets, and processing context
+  # ---------------------------------------------------
+
+  :Hospital
+    a odrl:Party ;
+    dct:title "Example Hospital" .
+
+  :ResearchUnit
+    a odrl:Party ;
+    dct:title "Hospital Research Unit" .
+
+  :PharmaPartner
+    a odrl:Party ;
+    dct:title "Pharma Partner" .
+
+  :ClinicalAIService
+    a odrl:Party ;
+    dct:title "Clinical AI Service Provider" .
+
+  :HealthRecordData
+    a pd:HealthRecord ;
+    dct:title "Electronic Health Record (EHR) data" .
+
+  :GenomicData
+    a pd:Genetic ;
+    dct:title "Genomic sequencing data" .
+
+  :ProcessContextHC1
+    a dpv:Process ;
+    dct:title "Example healthcare processing context" .
+
+
+  # ---------------------------------------------------
+  # 2) Patient profile
+  # ---------------------------------------------------
+
+  :PatientExample
+    a :PatientProfile, odrl:Party ;
+    dct:title "Example patient profile" ;
+    :hasNeed
+      :Need_ConsentForResearch,
+      :Need_DeIdentifyBeforeSharing,
+      :Need_HumanReviewForAutomatedTriage,
+      :Need_RetentionLimit3y .
+
+  :Need_ConsentForResearch
+    a :Need ;
+    dct:description "Explicit opt-in consent required before secondary use for research/publication." ;
+    :importance 35 .
+
+  :Need_DeIdentifyBeforeSharing
+    a :Need ;
+    dct:description "De-identify or pseudonymise health/genetic data before sharing with external partners." ;
+    :importance 35 .
+
+  :Need_HumanReviewForAutomatedTriage
+    a :Need ;
+    dct:description "Human review/override required for automated triage decisions." ;
+    :importance 25 .
+
+  :Need_RetentionLimit3y
+    a :Need ;
+    dct:description "Retention limited to 3 years unless a specific legal obligation requires longer retention." ;
+    :importance 15 ;
+    :maxRetentionDays 1095 .
+
+
+  # ---------------------------------------------------
+  # 3) Agreement and ODRL policy clauses
+  # ---------------------------------------------------
+
+  :ClauseH1
+    a :Clause ;
+    :clauseId "H1" ;
+    :text "Hospital may use EHR and genomic data for internal clinical research and publication." .
+
+  :ClauseH2
+    a :Clause ;
+    :clauseId "H2" ;
+    :text "Hospital may share genomic data with pharmaceutical partners for drug discovery and R&D." .
+
+  :ClauseH3
+    a :Clause ;
+    :clauseId "H3" ;
+    :text "Hospital may use automated triage and prioritisation systems using EHR data." .
+
+  :ClauseH4
+    a :Clause ;
+    :clauseId "H4" ;
+    :text "Hospital retains patient health records for 10 years." .
+
+  :AgreementHC1
+    a odrl:Agreement ;
+    dct:title "Example Healthcare & Life-Sciences Data Use Agreement" ;
+    :hasPolicy :PolicyHC1 .
+
+  :PolicyHC1
+    a odrl:Policy ;
+    odrl:permission
+      :PermResearchUse,
+      :PermShareWithPharma,
+      :PermAutomatedTriage,
+      :PermRetention10y .
+
+
+  # Permission: internal clinical research
+  # Missing explicit-consent constraint, so R1 should fire.
+
+  :PermResearchUse
+    a odrl:Permission ;
+    odrl:assigner :Hospital ;
+    odrl:assignee :ResearchUnit ;
+    odrl:action hl7ca:use ;
+    odrl:target :HealthRecordData, :GenomicData ;
+    odrl:constraint :ConstraintResearchPurpose ;
+    :clause :ClauseH1 .
+
+  :ConstraintResearchPurpose
+    a odrl:Constraint ;
+    odrl:leftOperand odrl:purpose ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperandReference :PurposeHMB .
+
+
+  # Permission: share genomic data with pharma
+  # Missing de-identification constraint, so R2 should fire.
+
+  :PermShareWithPharma
+    a odrl:Permission ;
+    odrl:assigner :Hospital ;
+    odrl:assignee :PharmaPartner ;
+    odrl:action hl7ca:disclose ;
+    odrl:target :GenomicData ;
+    odrl:constraint :ConstraintSharePurpose ;
+    :clause :ClauseH2 .
+
+  :ConstraintSharePurpose
+    a odrl:Constraint ;
+    odrl:leftOperand odrl:purpose ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperandReference :PurposeHMB .
+
+
+  # Permission: automated triage
+  # NOTE: the original file contains a humanReview duty here.
+  # Therefore R3 will NOT fire in this faithful translation.
+
+  :PermAutomatedTriage
+    a odrl:Permission ;
+    odrl:assigner :Hospital ;
+    odrl:assignee :ClinicalAIService ;
+    odrl:action hl7ca:use ;
+    odrl:target :HealthRecordData ;
+    odrl:constraint :ConstraintTriagePurpose ;
+    :clause :ClauseH3 ;
+    odrl:duty :DutyHumanReviewButOnlyEncryptionConstraint .
+
+  :ConstraintTriagePurpose
+    a odrl:Constraint ;
+    odrl:leftOperand odrl:purpose ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperandReference :PurposeCC .
+
+  :DutyHumanReviewButOnlyEncryptionConstraint
+    a odrl:Duty ;
+    odrl:action :humanReview ;
+    odrl:constraint :ConstraintEncryptionAtRest .
+
+  :ConstraintEncryptionAtRest
+    a odrl:Constraint ;
+    odrl:leftOperand :encryptionAtRest ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperand true .
+
+
+  # Permission: retain for 10 years
+  # Exceeds patient max of 1095 days, so R4 should fire.
+
+  :PermRetention10y
+    a odrl:Permission ;
+    odrl:assigner :Hospital ;
+    odrl:assignee :Hospital ;
+    odrl:action hl7ca:collect ;
+    odrl:target :HealthRecordData ;
+    odrl:constraint :ConstraintRetentionPurpose, :ConstraintRetentionDays ;
+    :clause :ClauseH4 .
+
+  :ConstraintRetentionPurpose
+    a odrl:Constraint ;
+    odrl:leftOperand odrl:purpose ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperandReference :PurposeCC .
+
+  :ConstraintRetentionDays
+    a odrl:Constraint ;
+    odrl:leftOperand :retentionDays ;
+    odrl:operator odrl:eq ;
+    odrl:rightOperand 3650 .
+}
+
+
+# =====================================================
+# R1: Secondary research use without explicit consent
+# =====================================================
+
+RULE {
+  :Risk_ResearchNoConsent_H1
+    a dpv:Risk, risk:PolicyRisk, risk:CustomerConfidenceLoss ;
+    dct:source :PermResearchUse ;
+    risk:hasRiskSource :RiskSource_ResearchNoConsent_H1 ;
+    dpv:hasConsequence risk:CustomerConfidenceLoss ;
+    dpv:hasImpact risk:NonMaterialDamage, risk:FinancialLoss ;
+    :aboutClause :ClauseH1 ;
+    :scoreRaw ?raw ;
+    :violatesNeed :Need_ConsentForResearch ;
+    dct:description "Risk: health/genomic data may be used for research without explicit opt-in consent. Clause H1: Hospital may use EHR and genomic data for internal clinical research and publication." .
+
+  :RiskSource_ResearchNoConsent_H1
+    a risk:RiskSource, risk:LegalComplianceRisk ;
+    dct:source :PermResearchUse ;
+    dct:description "Research use permitted without explicit consent constraint." .
+
+  :ProcessContextHC1
+    dpv:hasRisk :Risk_ResearchNoConsent_H1 .
+
+  :Mitigation_ResearchNoConsent_H1
+    a dpv:RiskMitigationMeasure ;
+    dct:description "Add an explicit consent constraint for secondary research use." ;
+    dpv:mitigatesRisk :Risk_ResearchNoConsent_H1 ;
+    :suggestedChange "Add: :PermResearchUse odrl:constraint [ a odrl:Constraint ; odrl:leftOperand :explicitConsent ; odrl:operator odrl:eq ; odrl:rightOperand true ] ." .
+
+  :Risk_ResearchNoConsent_H1
+    dpv:isMitigatedByMeasure :Mitigation_ResearchNoConsent_H1 .
+}
+WHERE {
+  :AgreementHC1 :hasPolicy :PolicyHC1 .
+  :PolicyHC1 odrl:permission :PermResearchUse .
+
+  :PatientExample :hasNeed :Need_ConsentForResearch .
+  :Need_ConsentForResearch :importance ?w .
+
+  :PermResearchUse
+    a odrl:Permission ;
+    :clause :ClauseH1 .
+
+  FILTER NOT EXISTS {
+    :PermResearchUse odrl:constraint ?c .
+    ?c
+      a odrl:Constraint ;
+      odrl:leftOperand :explicitConsent ;
+      odrl:operator odrl:eq ;
+      odrl:rightOperand true .
+  }
+
+  BIND((85 + ?w) AS ?raw)
+}
+
+
+# =====================================================
+# R2: External genomic sharing without de-identification
+# =====================================================
+
+RULE {
+  :Risk_ShareNoDeId_H2
+    a dpv:Risk, risk:UnwantedDisclosureData, risk:ReputationalRisk ;
+    dct:source :PermShareWithPharma ;
+    risk:hasRiskSource :RiskSource_ShareNoDeId_H2 ;
+    dpv:hasConsequence risk:CustomerConfidenceLoss ;
+    dpv:hasImpact risk:NonMaterialDamage, risk:FinancialLoss, risk:Discrimination ;
+    :aboutClause :ClauseH2 ;
+    :scoreRaw ?raw ;
+    :violatesNeed :Need_DeIdentifyBeforeSharing ;
+    dct:description "Risk: genomic data may be shared with external pharma partners without a de-identification/pseudonymisation requirement. Clause H2: Hospital may share genomic data with pharmaceutical partners for drug discovery and R&D." .
+
+  :RiskSource_ShareNoDeId_H2
+    a risk:RiskSource, risk:LegalComplianceRisk ;
+    dct:source :PermShareWithPharma ;
+    dct:description "External sharing permitted without de-identification/pseudonymisation requirement." .
+
+  :ProcessContextHC1
+    dpv:hasRisk :Risk_ShareNoDeId_H2 .
+
+  :Mitigation_ShareNoDeId_H2
+    a dpv:RiskMitigationMeasure ;
+    dct:description "Require de-identification/pseudonymisation before external sharing of genomic data." ;
+    dpv:mitigatesRisk :Risk_ShareNoDeId_H2 ;
+    :suggestedChange "Add: :PermShareWithPharma odrl:constraint [ a odrl:Constraint ; odrl:leftOperand :deIdentified ; odrl:operator odrl:eq ; odrl:rightOperand true ] ." .
+
+  :Risk_ShareNoDeId_H2
+    dpv:isMitigatedByMeasure :Mitigation_ShareNoDeId_H2 .
+}
+WHERE {
+  :AgreementHC1 :hasPolicy :PolicyHC1 .
+  :PolicyHC1 odrl:permission :PermShareWithPharma .
+
+  :PatientExample :hasNeed :Need_DeIdentifyBeforeSharing .
+  :Need_DeIdentifyBeforeSharing :importance ?w .
+
+  :PermShareWithPharma
+    a odrl:Permission ;
+    :clause :ClauseH2 .
+
+  FILTER NOT EXISTS {
+    :PermShareWithPharma odrl:constraint ?c .
+    ?c
+      a odrl:Constraint ;
+      odrl:leftOperand :deIdentified ;
+      odrl:operator odrl:eq ;
+      odrl:rightOperand true .
+  }
+
+  BIND((90 + ?w) AS ?raw)
+}
+
+
+# =====================================================
+# R3: Automated triage without human review
+# =====================================================
+#
+# This rule is included for fidelity to the N3 rule intent.
+# With the DATA above, it should NOT fire because
+# :PermAutomatedTriage already has an odrl:duty whose
+# odrl:action is :humanReview.
+#
+# To test the risk, remove:
+#
+#   :PermAutomatedTriage odrl:duty :DutyHumanReviewButOnlyEncryptionConstraint .
+#
+# from the DATA block.
+
+RULE {
+  :Risk_AutoTriageNoHuman_H3
+    a dpv:Risk, risk:QualityRisk, risk:InabilityToProvideHealthCare ;
+    dct:source :PermAutomatedTriage ;
+    risk:hasRiskSource :RiskSource_AutoTriageNoHuman_H3 ;
+    dpv:hasConsequence risk:InabilityToProvideHealthCare ;
+    dpv:hasImpact risk:PhysicalHarm, risk:NonMaterialDamage ;
+    :aboutClause :ClauseH3 ;
+    :scoreRaw ?raw ;
+    :violatesNeed :Need_HumanReviewForAutomatedTriage ;
+    dct:description "Risk: automated triage may affect care pathways without a human review/override safeguard. Clause H3: Hospital may use automated triage and prioritisation systems using EHR data." .
+
+  :RiskSource_AutoTriageNoHuman_H3
+    a risk:RiskSource, risk:PolicyRisk ;
+    dct:source :PermAutomatedTriage ;
+    dct:description "Automated triage permitted without a human review/override duty." .
+
+  :ProcessContextHC1
+    dpv:hasRisk :Risk_AutoTriageNoHuman_H3 .
+
+  :Mitigation_AutoTriageNoHuman_H3
+    a dpv:RiskMitigationMeasure ;
+    dct:description "Add a duty requiring human review/override for triage decisions (human-in-the-loop)." ;
+    dpv:mitigatesRisk :Risk_AutoTriageNoHuman_H3 ;
+    :suggestedChange "Add: :PermAutomatedTriage odrl:duty [ a odrl:Duty ; odrl:action :humanReview ; odrl:constraint [ a odrl:Constraint ; odrl:leftOperand :reviewBeforeDecision ; odrl:operator odrl:eq ; odrl:rightOperand true ] ] ." .
+
+  :Risk_AutoTriageNoHuman_H3
+    dpv:isMitigatedByMeasure :Mitigation_AutoTriageNoHuman_H3 .
+}
+WHERE {
+  :AgreementHC1 :hasPolicy :PolicyHC1 .
+  :PolicyHC1 odrl:permission :PermAutomatedTriage .
+
+  :PatientExample :hasNeed :Need_HumanReviewForAutomatedTriage .
+  :Need_HumanReviewForAutomatedTriage :importance ?w .
+
+  :PermAutomatedTriage
+    a odrl:Permission ;
+    :clause :ClauseH3 .
+
+  FILTER NOT EXISTS {
+    :PermAutomatedTriage odrl:duty ?duty .
+    ?duty
+      a odrl:Duty ;
+      odrl:action :humanReview .
+  }
+
+  BIND((80 + ?w) AS ?raw)
+}
+
+
+# =====================================================
+# R4: Retention exceeds patient max
+# =====================================================
+
+RULE {
+  :Risk_RetentionTooLong_H4
+    a dpv:Risk, risk:PolicyRisk, risk:CustomerConfidenceLoss ;
+    dct:source :PermRetention10y ;
+    risk:hasRiskSource :RiskSource_RetentionTooLong_H4 ;
+    dpv:hasConsequence risk:CustomerConfidenceLoss ;
+    dpv:hasImpact risk:NonMaterialDamage ;
+    :aboutClause :ClauseH4 ;
+    :scoreRaw ?raw ;
+    :violatesNeed :Need_RetentionLimit3y ;
+    dct:description "Risk: retention period exceeds patient preference. Clause H4: Hospital retains patient health records for 10 years." .
+
+  :RiskSource_RetentionTooLong_H4
+    a risk:RiskSource, risk:PolicyRisk ;
+    dct:source :PermRetention10y ;
+    dct:description "Retention period exceeds patient preference." .
+
+  :ProcessContextHC1
+    dpv:hasRisk :Risk_RetentionTooLong_H4 .
+
+  :Mitigation_RetentionTooLong_H4
+    a dpv:RiskMitigationMeasure ;
+    dct:description "Limit retention to 3 years (or document the legal obligation requiring longer retention)." ;
+    dpv:mitigatesRisk :Risk_RetentionTooLong_H4 ;
+    :suggestedChange "Add: :PermRetention10y odrl:constraint [ a odrl:Constraint ; odrl:leftOperand :retentionDays ; odrl:operator odrl:lteq ; odrl:rightOperand 1095 ] ." .
+
+  :Risk_RetentionTooLong_H4
+    dpv:isMitigatedByMeasure :Mitigation_RetentionTooLong_H4 .
+}
+WHERE {
+  :AgreementHC1 :hasPolicy :PolicyHC1 .
+  :PolicyHC1 odrl:permission :PermRetention10y .
+
+  :PatientExample :hasNeed :Need_RetentionLimit3y .
+  :Need_RetentionLimit3y
+    :importance ?w ;
+    :maxRetentionDays ?max .
+
+  :PermRetention10y
+    a odrl:Permission ;
+    odrl:constraint ?retentionConstraint ;
+    :clause :ClauseH4 .
+
+  ?retentionConstraint
+    a odrl:Constraint ;
+    odrl:leftOperand :retentionDays ;
+    odrl:rightOperand ?days .
+
+  FILTER (?days > ?max)
+
+  BIND((55 + ?w) AS ?raw)
+}
+
+
+# =====================================================
+# 5) Score normalization
+# =====================================================
+
+RULE {
+  ?risk :score 100 .
+}
+WHERE {
+  ?risk a dpv:Risk ;
+        :scoreRaw ?raw .
+
+  FILTER (?raw > 100)
+}
+
+
+RULE {
+  ?risk :score ?raw .
+}
+WHERE {
+  ?risk a dpv:Risk ;
+        :scoreRaw ?raw .
+
+  FILTER (?raw <= 100)
+}
+
+
+# =====================================================
+# 6) Risk severity / risk level
+# =====================================================
+
+RULE {
+  ?risk
+    dpv:hasSeverity risk:HighSeverity ;
+    dpv:hasRiskLevel risk:HighRisk .
+}
+WHERE {
+  ?risk a dpv:Risk ;
+        :score ?score .
+
+  FILTER (?score > 79)
+}
+
+
+RULE {
+  ?risk
+    dpv:hasSeverity risk:ModerateSeverity ;
+    dpv:hasRiskLevel risk:ModerateRisk .
+}
+WHERE {
+  ?risk a dpv:Risk ;
+        :score ?score .
+
+  FILTER (?score < 80 && ?score > 49)
+}
+
+
+RULE {
+  ?risk
+    dpv:hasSeverity risk:LowSeverity ;
+    dpv:hasRiskLevel risk:LowRisk .
+}
+WHERE {
+  ?risk a dpv:Risk ;
+        :score ?score .
+
+  FILTER (?score < 50)
+}
+
+
+# =====================================================
+# 7) Ranked report as RDF triples
+# =====================================================
+
+RULE {
+  :ReportHC1
+    a :RankedRiskReport ;
+    dct:title "Ranked DPV Risk Report (Healthcare & Life Sciences)" ;
+    :agreement :AgreementHC1 ;
+    :profile :PatientExample ;
+    :reportLine "=== Ranked DPV Risk Report (Healthcare & Life Sciences) === Agreement: Example Healthcare & Life-Sciences Data Use Agreement Profile: Example patient profile" .
+}
+WHERE {
+  :AgreementHC1 dct:title ?agreementTitle .
+  :PatientExample dct:title ?profileTitle .
+}
+
+
+RULE {
+  ?risk
+    :rankKey ?rankKey ;
+    :reportLine ?line .
+}
+WHERE {
+  ?risk
+    a dpv:Risk ;
+    :score ?score ;
+    dpv:hasRiskLevel ?level ;
+    dpv:hasSeverity ?severity ;
+    :aboutClause ?clause ;
+    dct:description ?why .
+
+  ?clause :clauseId ?clauseId .
+
+  BIND((1000 - ?score) AS ?rankKey)
+
+  BIND(
+    CONCAT(
+      "score=", STR(?score),
+      " (", STR(?level), ", ", STR(?severity), ") ",
+      "clause ", STR(?clauseId), " - ",
+      STR(?why)
+    )
+    AS ?line
+  )
+}
+
+
+RULE {
+  ?mitigation
+    :rankKey ?rankKey ;
+    :mitigationLine ?line .
+}
+WHERE {
+  ?risk
+    a dpv:Risk ;
+    :score ?score ;
+    dpv:isMitigatedByMeasure ?mitigation ;
+    :aboutClause ?clause .
+
+  ?clause :clauseId ?clauseId .
+  ?mitigation dct:description ?description .
+
+  BIND((1000 - ?score) AS ?rankKey)
+
+  BIND(
+    CONCAT(
+      " - mitigation for clause ",
+      STR(?clauseId),
+      ": ",
+      STR(?description)
+    )
+    AS ?line
+  )
+}

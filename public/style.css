@@ -51,11 +51,20 @@ main {
 }
 
 .panel-header {
-  background: #1e293b; padding: .55rem 1rem; font-size: .78rem; font-weight: 600;
+  background: #1e293b; padding: .6rem 1rem; font-size: .78rem; font-weight: 600;
   color: #94a3b8; text-transform: uppercase; letter-spacing: .08em;
   border-bottom: 1px solid #334155; display: flex; align-items: center;
-  justify-content: space-between; flex-shrink: 0;
+  justify-content: space-between; flex-shrink: 0; gap: .5rem;
+  min-height: 2.6rem;
 }
+.panel-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.btn-examples {
+  background: #0ea5e920; color: #7dd3fc; border: 1px solid #0ea5e960;
+  padding: .35rem .85rem; border-radius: 6px; font-size: .8rem; font-weight: 600;
+  cursor: pointer; transition: background .15s, border-color .15s; white-space: nowrap;
+}
+.btn-examples:hover { background: #0ea5e940; border-color: #7dd3fc; }
 
 .btn-upload {
   background: #0ea5e920; color: #7dd3fc; border: 1px solid #0ea5e960;
@@ -154,6 +163,11 @@ textarea::placeholder { color: #3d4f6b; }
 .status.done        { color: #34d399; }
 .status.error       { color: #f87171; }
 
+.exec-time {
+  font-size: .78rem; color: #475569; margin-left: .2rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .results-panel {
   display: flex; flex-direction: column;
   border-top: 1px solid #1e293b;
@@ -169,6 +183,8 @@ thead th {
 }
 tbody tr:nth-child(even) { background: #0f1117; }
 tbody tr:hover           { background: #161b22; }
+tbody tr.data-row        { cursor: pointer; }
+tbody tr.data-row:hover  { background: #1a2744; }
 tbody td {
   padding: .4rem 1rem; border-bottom: 1px solid #161b22;
   font-family: 'JetBrains Mono', monospace; word-break: break-all;
@@ -210,6 +226,48 @@ tbody td {
   color: #475569;
   font-style: italic;
 }
+
+/* Provenance modal */
+.prov-triple {
+  background: #0d1117; border: 1px solid #334155; border-radius: 6px;
+  padding: .7rem 1rem; margin-bottom: 1.2rem; display: flex; flex-direction: column; gap: .3rem;
+}
+.prov-label {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; color: #475569; font-weight: 600;
+}
+.prov-triple code {
+  font-family: 'JetBrains Mono', monospace; font-size: .82rem; color: #7dd3fc;
+  word-break: break-all; background: none; padding: 0;
+}
+.prov-loading, .prov-empty { color: #475569; font-style: italic; font-size: .85rem; padding: .5rem 0; }
+.prov-error { color: #f87171; font-size: .85rem; padding: .5rem 0; }
+
+.prov-rule-block {
+  border: 1px solid #334155; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;
+}
+.prov-rule-title {
+  background: #0f172a; padding: .45rem 1rem; font-size: .73rem; font-weight: 700;
+  color: #38bdf8; text-transform: uppercase; letter-spacing: .07em;
+}
+.prov-rule-code {
+  background: #0d1117; border: none; border-bottom: 1px solid #334155; border-radius: 0;
+  padding: .75rem 1rem; font-family: 'JetBrains Mono', monospace;
+  font-size: .79rem; line-height: 1.6; color: #c9d1d9; margin: 0; overflow-x: auto;
+}
+.prov-bindings-title {
+  padding: .5rem 1rem .3rem; font-size: .73rem; font-weight: 600;
+  color: #64748b; text-transform: uppercase; letter-spacing: .07em;
+}
+.prov-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.prov-table th {
+  background: #161b22; color: #8b949e; text-transform: uppercase;
+  font-size: .68rem; letter-spacing: .07em; padding: .35rem .9rem; text-align: left;
+}
+.prov-table td {
+  padding: .35rem .9rem; border-top: 1px solid #1e293b;
+  font-family: 'JetBrains Mono', monospace; word-break: break-all; color: #cbd5e1;
+}
+.prov-table tr:nth-child(even) td { background: #0a0f1a; }
 
 
 
