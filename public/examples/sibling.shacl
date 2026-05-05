@@ -1,0 +1,15 @@
+PREFIX : <http://example/>
+
+DATA {
+  :alice :parent :carol .
+  :bob   :parent :carol .
+  :dave  :parent :carol .
+}
+
+RULE { ?a :sibling ?b . }
+WHERE {
+  ?a :parent ?p .
+  ?b :parent ?p .
+  FILTER(?a != ?b)
+}
+

@@ -37,6 +37,13 @@
       <button class="btn-clear" @click="clearResults">Clear</button>
       <span class="status" :class="statusClass">{{ statusText }}</span>
       <div class="controls-right">
+        <div class="dropdown" ref="examplesBtn">
+          <button class="btn-help" @click="toggleExamples">📋 Examples ▾</button>
+          <div class="dropdown-menu" v-if="showExamples">
+            <div v-for="ex in examples" :key="ex.file" class="dropdown-item" @click="loadExample(ex)">{{ ex.name }}</div>
+            <div v-if="examples.length === 0" class="dropdown-empty">No examples found</div>
+          </div>
+        </div>
         <button class="btn-help" @click="showModal('how')">📖 How to use</button>
         <button class="btn-help" @click="showModal('grammar')">📐 Grammar</button>
         <button class="btn-upload" @click="triggerFileUpload">📂 Upload .ttl</button>

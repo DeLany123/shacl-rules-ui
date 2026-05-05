@@ -1,0 +1,14 @@
+PREFIX : <http://example/>
+
+DATA {
+  :alice :age 30 .
+  :bob   :age 15 .
+  :carol :age 18 .
+}
+
+RULE { ?p :isAdult true . }
+WHERE { ?p :age ?a . FILTER(?a >= 18) }
+
+RULE { ?p :isMinor true . }
+WHERE { ?p :age ?a . FILTER(?a < 18) }
+

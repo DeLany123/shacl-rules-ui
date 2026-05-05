@@ -179,5 +179,37 @@ tbody td {
 .empty-state { padding: 2rem; text-align: center; color: #3d4f6b; font-size: .88rem; }
 .error-row td { color: #f87171 !important; font-style: italic; }
 
+/* Examples dropdown */
+.dropdown { position: relative; }
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  min-width: 220px;
+  z-index: 50;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: .55rem 1rem;
+  font-size: .83rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+.dropdown-item:hover { background: #334155; color: #f1f5f9; }
+
+.dropdown-empty {
+  padding: .6rem 1rem;
+  font-size: .8rem;
+  color: #475569;
+  font-style: italic;
+}
+
 
 

@@ -1,5 +1,5 @@
 import './engine.js';
-import { createApp, ref, computed, watch, nextTick } from 'vue';
+import { createApp, ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 
 const DEFAULT_SHACL =
 `PREFIX : <http://example/>
@@ -27,6 +27,86 @@ createApp({
     const scroll      = ref(null);
     const fileInput   = ref(null);
     const modal       = ref(null); // 'grammar' | 'how' | null
+
+    // --- Examples dropdown ---
+    const examples     = ref([]);
+    const showExamples = ref(false);
+    const examplesBtn  = ref(null);
+
+    // --- URL state ---
+    function encodeURLComponent(s) {
+      return encodeURIComponent(s).replace(/\(/g, '%28').replace(/\)/g, '%29');
+    }
+
+    function loadStateFromUrl() {
+      let hash = location.hash;
+      if (!hash && location.search && !location.search.includes('&state')) {
+        hash = location.search.replace(/\+/g, '%20');
+        history.replaceState(null, null, window.location.href.replace('?', '#').replace(/\+/g, '%20'));
+      }
+      const state = hash.slice(1).split('&').reduce((acc, item) => {
+        const kv = item.match(/^([^=]+)=(.*)/);
+        if (kv) acc[decodeURIComponent(kv[1])] = decodeURIComponent(kv[2]);
+        return acc;
+      }, {});
+      if (state.query !== undefined) shaclQuery.value = state.query;
+      if (state.data !== undefined) turtleData.value = state.data;
+    }
+
+    function saveStateToUrl() {
+      const parts = [];
+      parts.push('query=' + encodeURLComponent(shaclQuery.value));
+      if (turtleData.value) parts.push('data=' + encodeURLComponent(turtleData.value));
+      const qs = '#' + parts.join('&');
+      history.replaceState(null, null, location.href.replace(/(?:#.*)?$/, qs));
+    }
+
+    onMounted(async () => {
+      // Load URL state before fetching examples
+      loadStateFromUrl();
+      window.addEventListener('popstate', loadStateFromUrl);
+
+      try {
+        const res = await fetch('./examples/index.json');
+        examples.value = await res.json();
+      } catch (e) {
+        console.warn('Could not load examples index:', e);
+      }
+      document.addEventListener('click', handleOutsideClick);
+
+      // Save state whenever editors change
+      watch([shaclQuery, turtleData], saveStateToUrl, { flush: 'post' });
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleOutsideClick);
+      window.removeEventListener('popstate', loadStateFromUrl);
+    });
+
+    function handleOutsideClick(e) {
+      if (examplesBtn.value && !examplesBtn.value.contains(e.target)) {
+        showExamples.value = false;
+      }
+    }
+
+    function toggleExamples() { showExamples.value = !showExamples.value; }
+
+    async function loadExample(ex) {
+      showExamples.value = false;
+      try {
+        const res = await fetch(`./examples/${ex.file}`);
+        const text = await res.text();
+        shaclQuery.value = text.trim();
+        turtleData.value = '';
+        rows.value = [];
+        neverRan.value = true;
+        statusText.value = `Loaded: ${ex.name}`;
+        statusClass.value = '';
+      } catch (e) {
+        statusText.value = 'Failed to load example.';
+        statusClass.value = 'error';
+      }
+    }
 
     function showModal(which) { modal.value = which; }
 
@@ -139,7 +219,9 @@ createApp({
     return {
       shaclQuery, turtleData, running, rows, neverRan, goodRows,
       statusText, statusClass, scroll, fileInput, modal,
-      fmt, clearResults, runQuery, triggerFileUpload, handleFileUpload, showModal,
+      examples, showExamples, examplesBtn,
+      fmt, clearResults, runQuery, triggerFileUpload, handleFileUpload,
+      showModal, toggleExamples, loadExample,
     };
   },
 }).mount('#app');
